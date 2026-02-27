@@ -13,16 +13,16 @@ router = APIRouter()
 
 @router.get("/price/{symbol}")
 def price(symbol: str):
-    """Return the latest market price for a given symbol.
+    """Return the latest market price for a ticker.
 
-    Parameters:
-        symbol (str): Asset ticker symbol (e.g., "AAPL").
+    Args:
+        symbol: Asset ticker symbol (for example, ``"AAPL"``).
 
     Returns:
-        dict: JSON object containing `symbol` and numeric `price`.
+        Response object containing ``symbol`` and ``price``.
 
     Raises:
-        HTTPException: 404 when the symbol has no available data.
+        HTTPException: 404 when the ticker has no available data.
     """
     try:
         value = get_price(symbol)

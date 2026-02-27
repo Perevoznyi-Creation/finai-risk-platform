@@ -10,20 +10,22 @@ from fastapi import FastAPI
 from app.api.price import router as price_router
 from app.api.history import router as history_router
 from app.api.risk import router as risk_router
+from app.api.risk_profile import router as risk_profile_router
 
 app = FastAPI(title="FinAI Risk Platform")
 
 app.include_router(price_router)
 app.include_router(history_router)
 app.include_router(risk_router)
+app.include_router(risk_profile_router)
 
 
 @app.get("/health")
 def health():
-    """Return a minimal health check for the service.
+    """Return service liveness status.
 
     Returns:
-        dict: A JSON object containing the service status.
+        Static JSON payload indicating the API is reachable.
     """
     return {"status": "ok"}
 

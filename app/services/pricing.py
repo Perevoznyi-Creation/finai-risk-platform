@@ -11,16 +11,16 @@ from app.scoring.risk_scoring import classify_risk
 
 
 def get_price(symbol: str) -> float:
-    """Get the current market price of an asset.
+    """Return the latest close price for a ticker symbol.
 
-    Parameters:
-        symbol (str): Ticker symbol (e.g., "AAPL").
+    Args:
+        symbol: Asset ticker (for example, ``"AAPL"``).
 
     Returns:
-        float: Latest closing price for the symbol.
+        Latest close price from a 1-day history window.
 
     Raises:
-        ValueError: If no data is available for the provided symbol.
+        ValueError: No market data was returned for ``symbol``.
     """
     ticker = yf.Ticker(symbol)
     data = ticker.history(period="1d")
@@ -32,18 +32,17 @@ def get_price(symbol: str) -> float:
 
 
 def get_price_history(symbol: str, days: int) -> Any:
-    """Retrieve historical closing prices for the last `days` days.
+    """Return trailing historical close prices for a ticker.
 
-    Parameters:
-        symbol (str): Ticker symbol.
-        days (int): Number of trailing days to request.
+    Args:
+        symbol: Asset ticker symbol.
+        days: Number of trailing calendar days to request.
 
     Returns:
-        pandas.DataFrame: DataFrame containing the `Close` column for
-                          the specified period.
+        DataFrame with a single ``Close`` column indexed by date.
 
     Raises:
-        ValueError: If no historical data exists for the symbol.
+        ValueError: No historical data was returned for ``symbol``.
     """
     ticker = yf.Ticker(symbol)
     data = ticker.history(period=f"{days}d")
@@ -54,21 +53,18 @@ def get_price_history(symbol: str, days: int) -> Any:
     return data[["Close"]]
 
 def get_risk_metrics(symbol: str, days: int) -> dict:
-    """Compute risk metrics for an asset based on historical prices.
+    """Compute aggregate risk metrics from price history.
 
-    This function retrieves historical price data and computes
-    returns, volatility, and maximum drawdown.
-
-    Parameters:
-        symbol (str): Ticker symbol.
-        days (int): Number of trailing days to analyze.
+    Args:
+        symbol: Asset ticker symbol.
+        days: Number of trailing days used to compute metrics.
 
     Returns:
-        dict: A dictionary containing `symbol`, `volatility`, and
-              `max_drawdown` metrics.
+        Dictionary containing ``volatility``, ``max_drawdown``,
+        and ``mean_return``.
 
     Raises:
-        ValueError: If no historical data exists for the symbol.
+        ValueError: Price history could not be loaded.
     """
     df = get_price_history(symbol, days)
 
@@ -81,22 +77,18 @@ def get_risk_metrics(symbol: str, days: int) -> dict:
     }
 
 def get_risk_profile(symbol: str, days: int) -> dict:
-    """Get the risk profile of an asset based on historical price data.
+    """Classify ticker risk level from historical behavior.
 
-    This function computes the volatility and maximum drawdown for
-    the specified asset and classifies its risk level using the
-    `classify_risk` function.
-
-    Parameters:
-        symbol (str): Ticker symbol.
-        days (int): Number of trailing days to analyze.
+    Args:
+        symbol: Asset ticker symbol.
+        days: Number of trailing days used for feature extraction.
 
     Returns:
-        dict: A dictionary containing `symbol`, `volatility`,
-              `max_drawdown`, and `risk_profile` keys.
+        Dictionary with ``volatility``, ``max_drawdown``, and
+        categorical ``risk_level``.
 
     Raises:
-        ValueError: If no historical data exists for the symbol.
+        ValueError: Price history could not be loaded.
     """
     df = get_price_history(symbol, days)
     returns = compute_resurns(df)
@@ -110,3 +102,28 @@ def get_risk_profile(symbol: str, days: int) -> dict:
         "max_drawdown": max_drawdown,
         "risk_level": risk_level
     }
+
+def get_ml_risk_profile(symbol: str, days: int):
+    """Predict risk level with the trained ML model.
+
+    Args:
+        symbol: Asset ticker symbol.
+        days: Number of trailing days used for feature extraction.
+
+    Returns:
+        Dictionary of computed features plus predicted ``risk_level``.
+    """
+    df = get_price_history(symbol, days)
+    returns = compute_resurns(df)
+
+    features = {
+        "volatility": compute_volatility(returns),
+        "max_drawdown": compute_max_drawdown(df),
+        "mean_return": float(returns.mean())
+    }
+
+    return {
+        **features,
+        "risk_level": risk_model.predict(features)
+    }
+    

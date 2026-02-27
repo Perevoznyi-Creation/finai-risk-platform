@@ -13,19 +13,18 @@ router = APIRouter()
 
 @router.get("/history/{symbol}")
 def history(symbol: str, days: int = 30):
-    """Return historical closing prices for an asset.
+    """Return trailing close-price history for a ticker.
 
-    Parameters:
-        symbol (str): Asset ticker symbol.
-        days (int): Number of past days to retrieve (default: 30).
+    Args:
+        symbol: Asset ticker symbol.
+        days: Number of trailing days to retrieve.
 
     Returns:
-        dict: JSON object containing `symbol`, `days`, and `prices`,
-              where `prices` is a list of objects with `date` and
-              `close` keys.
+        Response object with ``symbol``, ``days``, and serialized
+        ``prices`` entries.
 
     Raises:
-        HTTPException: 404 when no historical data is available.
+        HTTPException: 404 when historical data is unavailable.
     """
     try:
         df = get_price_history(symbol, days)
