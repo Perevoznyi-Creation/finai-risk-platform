@@ -4,9 +4,15 @@ This module wraps calls to `yfinance` to retrieve current and
 historical market prices used by the API handlers.
 """
 
-import yfinance as yf
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
+
+import joblib
+import yfinance as yf
+from app.core.config import get_settings
 from app.metrics.risk import compute_resurns, compute_volatility, compute_max_drawdown
+from app.ml.model import RiskModel
 from app.scoring.risk_scoring import classify_risk
 
 
@@ -103,6 +109,23 @@ def get_risk_profile(symbol: str, days: int) -> dict:
         "risk_level": risk_level
     }
 
+
+@lru_cache
+def _load_risk_model() -> RiskModel | None:
+    """Load and cache the ML risk model from configured artifact paths."""
+
+    settings = get_settings()
+    model_path = Path(settings.model_path)
+    encoder_path = Path(settings.model_encoder_path)
+
+    if not model_path.exists() or not encoder_path.exists():
+        return None
+
+    model = joblib.load(model_path)
+    encoder = joblib.load(encoder_path)
+    return RiskModel(model=model, encoder=encoder)
+
+
 def get_ml_risk_profile(symbol: str, days: int):
     """Predict risk level with the trained ML model.
 
@@ -122,8 +145,13 @@ def get_ml_risk_profile(symbol: str, days: int):
         "mean_return": float(returns.mean())
     }
 
+    risk_model = _load_risk_model()
+    if risk_model is None:
+        raise ValueError(
+            "ML model artifacts not found. Train and export a model first."
+        )
+
     return {
         **features,
         "risk_level": risk_model.predict(features)
     }
-    

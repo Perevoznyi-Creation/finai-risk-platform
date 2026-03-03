@@ -7,12 +7,15 @@ systems.
 """
 
 from fastapi import FastAPI
+from app.core.config import get_settings
 from app.api.price import router as price_router
 from app.api.history import router as history_router
 from app.api.risk import router as risk_router
 from app.api.risk_profile import router as risk_profile_router
 
-app = FastAPI(title="FinAI Risk Platform")
+settings = get_settings()
+
+app = FastAPI(title=settings.app_name)
 
 app.include_router(price_router)
 app.include_router(history_router)
