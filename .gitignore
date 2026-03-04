@@ -211,3 +211,14 @@ app/api/__pycache__/price.cpython-314.pyc
 app/api/__pycache__/risk.cpython-314.pyc
 app/services/__pycache__/pricing.cpython-314.pyc
 app/metrics/__pycache__/risk.cpython-314.pyc
+app/__pycache__/main.cpython-314.pyc
+.gitignore
+app/__pycache__/main.cpython-314.pyc
+app/__pycache__/main.cpython-314.pyc
+app/__pycache__/main.cpython-314.pyc
+app/__pycache__/main.cpython-314.pyc
+app/api/__pycache__/history.cpython-314.pyc
+app/api/__pycache__/price.cpython-314.pyc
+app/api/__pycache__/risk.cpython-314.pyc
+app/metrics/__pycache__/risk.cpython-314.pyc
+app/services/__pycache__/pricing.cpython-314.pyc

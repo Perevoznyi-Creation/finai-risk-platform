@@ -6,13 +6,23 @@ prices for assets. It delegates data retrieval to the
 """
 
 from fastapi import APIRouter, HTTPException
+from app.schemas.errors import ErrorResponse
+from app.schemas.risk import PriceResponse, SymbolPathParam
 from app.services.pricing import get_price
 
 router = APIRouter()
 
 
-@router.get("/price/{symbol}")
-def price(symbol: str):
+@router.get(
+    "/price/{symbol}",
+    response_model=PriceResponse,
+    responses={
+        404: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
+)
+def price(symbol: SymbolPathParam) -> PriceResponse:
     """Return the latest market price for a ticker.
 
     Args:
@@ -24,11 +34,10 @@ def price(symbol: str):
     Raises:
         HTTPException: 404 when the ticker has no available data.
     """
+    normalized_symbol = symbol.upper()
+
     try:
-        value = get_price(symbol)
-        return {
-            "symbol": symbol,
-            "price": value
-        }
+        value = get_price(normalized_symbol)
+        return PriceResponse(symbol=normalized_symbol, price=value)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
