@@ -161,8 +161,51 @@ Possible `error` values:
 
 - `APP_NAME` (default: `FinAI Risk Platform`)
 - `APP_ENV` (default: `dev`)
+- `DATABASE_URL` (default: `sqlite:///./finai.db`)
 - `MODEL_PATH` (default: `artifacts/risk_model.joblib`)
 - `MODEL_ENCODER_PATH` (default: `artifacts/risk_label_encoder.joblib`)
+
+## Database Migrations (Alembic)
+
+Alembic is configured in [`alembic.ini`](alembic.ini) and uses `DATABASE_URL` from runtime settings.
+
+Check migration status:
+
+```bash
+poetry run alembic current
+poetry run alembic history
+```
+
+Apply migrations:
+
+```bash
+poetry run alembic upgrade head
+```
+
+Rollback migrations:
+
+```bash
+poetry run alembic downgrade -1
+# or rollback all migrations
+poetry run alembic downgrade base
+```
+
+Create a new migration after model changes:
+
+```bash
+poetry run alembic revision --autogenerate -m "describe change"
+poetry run alembic upgrade head
+```
+
+Create an empty migration (manual SQLAlchemy/Alembic ops):
+
+```bash
+poetry run alembic revision -m "manual change"
+```
+
+Current initial migration:
+
+- `alembic/versions/20260304_0001_initial.py`
 
 ## ML Notes
 
@@ -177,6 +220,12 @@ Run tests:
 
 ```bash
 poetry run pytest -q
+```
+
+Run migration tests only:
+
+```bash
+poetry run pytest -q tests/alembic/test_initial_migration.py
 ```
 
 Lint/type-check:
@@ -217,4 +266,8 @@ app/
     dataset.py
     model.py
     train.py
+alembic/
+  env.py
+  versions/
+    20260304_0001_initial.py
 ```

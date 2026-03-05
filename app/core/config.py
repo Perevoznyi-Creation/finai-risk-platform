@@ -13,6 +13,7 @@ class Settings(BaseModel):
 
     app_name: str = Field(default="FinAI Risk Platform")
     app_env: str = Field(default="dev")
+    database_url: str = Field(default="sqlite:///./finai.db")
     model_path: str = Field(default="artifacts/risk_model.joblib")
     model_encoder_path: str = Field(default="artifacts/risk_label_encoder.joblib")
 
@@ -24,6 +25,7 @@ def get_settings() -> Settings:
     return Settings(
         app_name=os.getenv("APP_NAME", "FinAI Risk Platform"),
         app_env=os.getenv("APP_ENV", "dev"),
+        database_url=os.getenv("DATABASE_URL", "sqlite:///./finai.db"),
         model_path=os.getenv("MODEL_PATH", "artifacts/risk_model.joblib"),
         model_encoder_path=os.getenv(
             "MODEL_ENCODER_PATH",
