@@ -1,51 +1,23 @@
 # FinAI Risk Platform
 
-AI-powered financial risk and insight backend built with FastAPI.
+FastAPI backend for market data retrieval and basic risk analytics.
 
 ## Overview
 
 FinAI Risk Platform provides REST endpoints for:
+
 - Latest asset price lookup
-- Historical price retrieval
-- Risk metric computation (volatility, max drawdown, mean return)
-- Rule-based risk profile classification (`LOW`, `MEDIUM`, `HIGH`)
+- Historical close-price retrieval
+- Risk metric computation (`volatility`, `max_drawdown`, `mean_return`)
+- Risk profile classification (`LOW`, `MEDIUM`, `HIGH`) via:
+  - Rule-based scoring (`mode=rule`, default)
+  - ML prediction (`mode=ml`) when model artifacts are available
 
 Market data is fetched from Yahoo Finance via `yfinance`.
 
-## Tech Stack
+## Requirements
 
-- Python
-- FastAPI + Uvicorn
-- Pandas / NumPy
-- Scikit-learn
-- yfinance
-- Poetry for dependency management
-
-## Project Structure
-
-```text
-app/
-  main.py                  # FastAPI app entrypoint
-  api/
-    price.py               # /price/{symbol}
-    history.py             # /history/{symbol}
-    risk.py                # /risk/{symbol}
-    risk_profile.py        # /risk-profile/{symbol}
-  services/
-    pricing.py             # Market data + risk service functions
-  metrics/
-    risk.py                # Returns/volatility/drawdown helpers
-  scoring/
-    risk_scoring.py        # Rule-based risk classification
-  ml/
-    dataset.py             # Feature/label dataset builder
-    model.py               # RiskModel prediction wrapper
-    train.py               # Local training script
-```
-
-## Prerequisites
-
-- Python `>=3.14` (as declared in `pyproject.toml`)
+- Python `>=3.12,<3.15`
 - Poetry
 
 ## Installation
@@ -54,116 +26,248 @@ app/
 poetry install
 ```
 
-## Run the API
+## Run API
 
 ```bash
 poetry run uvicorn app.main:app --reload
 ```
 
-Default URL:
-- `http://127.0.0.1:8000`
-
-Interactive docs:
+- Base URL: `http://127.0.0.1:8000`
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
 
-Health endpoint:
+Health check:
 
 ```bash
 curl http://127.0.0.1:8000/health
 ```
 
+## Request Validation Rules
+
+- `symbol` path param:
+  - 1-10 chars
+  - Regex: `^[A-Za-z][A-Za-z0-9.-]{0,9}$`
+- `days` query param:
+  - Integer in range `1..3650`
+- `mode` query param (`/risk-profile` only):
+  - `rule` (default) or `ml`
+
 ## API Endpoints
 
-### 1. Get latest price
+### `GET /price/{symbol}`
 
-```http
-GET /price/{symbol}
-```
-
-Example:
+Returns latest close price.
 
 ```bash
 curl http://127.0.0.1:8000/price/AAPL
 ```
 
-### 2. Get historical closes
+Example response:
 
-```http
-GET /history/{symbol}?days=30
+```json
+{
+  "symbol": "AAPL",
+  "price": 213.55
+}
 ```
 
-Example:
+### `GET /history/{symbol}?days=30`
+
+Returns trailing daily close prices.
 
 ```bash
 curl "http://127.0.0.1:8000/history/AAPL?days=30"
 ```
 
-### 3. Get risk metrics
+Example response:
 
-```http
-GET /risk/{symbol}?days=90
+```json
+{
+  "symbol": "AAPL",
+  "days": 30,
+  "prices": [
+    { "date": "2026-02-02", "close": 209.11 }
+  ]
+}
 ```
 
-Returns:
-- `volatility`
-- `max_drawdown`
-- `mean_return`
+### `GET /risk/{symbol}?days=90`
 
-Example:
+Returns computed risk metrics.
 
 ```bash
 curl "http://127.0.0.1:8000/risk/AAPL?days=90"
 ```
 
-### 4. Get rule-based risk profile
+Example response:
 
-```http
-GET /risk-profile/{symbol}?days=90
+```json
+{
+  "symbol": "AAPL",
+  "days": 90,
+  "metrics": {
+    "volatility": 0.0134,
+    "max_drawdown": -0.112,
+    "mean_return": 0.0008
+  }
+}
 ```
 
-Returns:
-- `volatility`
-- `max_drawdown`
-- `risk_level` (`LOW`, `MEDIUM`, `HIGH`)
+### `GET /risk-profile/{symbol}?days=90&mode=rule`
 
-Example:
+Returns categorical risk profile.
 
 ```bash
-curl "http://127.0.0.1:8000/risk-profile/AAPL?days=90"
+curl "http://127.0.0.1:8000/risk-profile/AAPL?days=90&mode=rule"
+curl "http://127.0.0.1:8000/risk-profile/AAPL?days=90&mode=ml"
 ```
 
-## ML Training Module
+Example response:
 
-Train a simple model from a small ticker universe:
+```json
+{
+  "symbol": "AAPL",
+  "days": 90,
+  "mode": "rule",
+  "profile": {
+    "volatility": 0.0134,
+    "max_drawdown": -0.112,
+    "risk_level": "MEDIUM"
+  }
+}
+```
+
+## Error Response Format
+
+All API errors use a common envelope:
+
+```json
+{
+  "error": "validation_error",
+  "message": "Request validation failed.",
+  "details": [
+    { "field": "query.days", "message": "Input should be greater than or equal to 1" }
+  ]
+}
+```
+
+Possible `error` values:
+
+- `validation_error` (422)
+- `http_error` (endpoint-raised HTTP errors, e.g., 400/404)
+- `internal_error` (500)
+
+## Environment Variables
+
+- `APP_NAME` (default: `FinAI Risk Platform`)
+- `APP_ENV` (default: `dev`)
+- `DATABASE_URL` (default: `sqlite:///./finai.db`)
+- `MODEL_PATH` (default: `artifacts/risk_model.joblib`)
+- `MODEL_ENCODER_PATH` (default: `artifacts/risk_label_encoder.joblib`)
+
+## Database Migrations (Alembic)
+
+Alembic is configured in [`alembic.ini`](alembic.ini) and uses `DATABASE_URL` from runtime settings.
+
+Check migration status:
 
 ```bash
-poetry run python -m app.ml.train
+poetry run alembic current
+poetry run alembic history
 ```
 
-Current training flow:
-- Builds dataset from historical prices
-- Engineers `volatility`, `max_drawdown`, `mean_return`
-- Uses rule-based labels as supervision target
-- Trains a scikit-learn Random Forest model
+Apply migrations:
+
+```bash
+poetry run alembic upgrade head
+```
+
+Rollback migrations:
+
+```bash
+poetry run alembic downgrade -1
+# or rollback all migrations
+poetry run alembic downgrade base
+```
+
+Create a new migration after model changes:
+
+```bash
+poetry run alembic revision --autogenerate -m "describe change"
+poetry run alembic upgrade head
+```
+
+Create an empty migration (manual SQLAlchemy/Alembic ops):
+
+```bash
+poetry run alembic revision -m "manual change"
+```
+
+Current initial migration:
+
+- `alembic/versions/20260304_0001_initial.py`
+
+## ML Notes
+
+- `app/ml/train.py` builds a dataset and trains a model in-process.
+- `/risk-profile?mode=ml` requires model artifacts to exist at `MODEL_PATH` and `MODEL_ENCODER_PATH`.
+- If artifacts are missing, the API returns `400` with:
+  - `"ML model artifacts not found. Train and export a model first."`
 
 ## Development
 
 Run tests:
 
 ```bash
-poetry run pytest
+poetry run pytest -q
 ```
 
-Lint and format:
+Run migration tests only:
 
 ```bash
-poetry run ruff check .
-poetry run black .
+poetry run pytest -q tests/alembic/test_initial_migration.py
+```
+
+Lint/type-check:
+
+```bash
+poetry run ruff check app
 poetry run mypy app
 ```
 
-## Notes
+Format:
 
-- Data availability depends on Yahoo Finance coverage for each ticker.
-- Invalid or unavailable symbols return API errors (`400`/`404`, depending on endpoint).
+```bash
+poetry run black .
+```
+
+## Project Structure
+
+```text
+app/
+  main.py
+  api/
+    price.py
+    history.py
+    risk.py
+    risk_profile.py
+  core/
+    config.py
+  services/
+    pricing.py
+  schemas/
+    risk.py
+    errors.py
+  metrics/
+    risk.py
+  scoring/
+    risk_scoring.py
+  ml/
+    dataset.py
+    model.py
+    train.py
+alembic/
+  env.py
+  versions/
+    20260304_0001_initial.py
+```
