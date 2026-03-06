@@ -10,6 +10,8 @@ router = APIRouter()
     "/risk/{symbol}",
     response_model=RiskResponse,
     responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
         404: {"model": ErrorResponse},
         422: {"model": ErrorResponse},
         500: {"model": ErrorResponse},

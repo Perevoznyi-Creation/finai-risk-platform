@@ -6,7 +6,7 @@ simple health check endpoint used by orchestration and monitoring
 systems.
 """
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
@@ -16,15 +16,18 @@ from app.api.risk import router as risk_router
 from app.api.risk_profile import router as risk_profile_router
 from app.schemas.errors import ErrorDetail, ErrorResponse
 from app.schemas.risk import HealthResponse
+from app.security.api_key import require_api_key
 
 settings = get_settings()
 
 app = FastAPI(title=settings.app_name)
 
-app.include_router(price_router)
-app.include_router(history_router)
-app.include_router(risk_router)
-app.include_router(risk_profile_router)
+protected_dependencies = [Depends(require_api_key)]
+
+app.include_router(price_router, dependencies=protected_dependencies)
+app.include_router(history_router, dependencies=protected_dependencies)
+app.include_router(risk_router, dependencies=protected_dependencies)
+app.include_router(risk_profile_router, dependencies=protected_dependencies)
 
 
 @app.exception_handler(HTTPException)
