@@ -1,3 +1,6 @@
+"""Rule-based risk classification — pure logic, no I/O."""
+
+
 def classify_risk(volatility: float, max_drawdown: float) -> str:
     """Map volatility and drawdown features to a risk label.
 
@@ -12,5 +15,4 @@ def classify_risk(volatility: float, max_drawdown: float) -> str:
         return "LOW"
     elif volatility < 0.025 and max_drawdown > -0.2:
         return "MEDIUM"
-    else:
-        return "HIGH"
+    return "HIGH"

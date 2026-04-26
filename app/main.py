@@ -6,25 +6,34 @@ simple health check endpoint used by orchestration and monitoring
 systems.
 """
 
-from fastapi import FastAPI, HTTPException, Request
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
+from app.core.logging import configure_logging
 from app.api.price import router as price_router
 from app.api.history import router as history_router
 from app.api.risk import router as risk_router
 from app.api.risk_profile import router as risk_profile_router
 from app.schemas.errors import ErrorDetail, ErrorResponse
 from app.schemas.risk import HealthResponse
+from app.security.api_key import require_api_key
 
 settings = get_settings()
+configure_logging(settings.log_level)
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name)
 
-app.include_router(price_router)
-app.include_router(history_router)
-app.include_router(risk_router)
-app.include_router(risk_profile_router)
+protected_dependencies = [Depends(require_api_key)]
+
+app.include_router(price_router, dependencies=protected_dependencies)
+app.include_router(history_router, dependencies=protected_dependencies)
+app.include_router(risk_router, dependencies=protected_dependencies)
+app.include_router(risk_profile_router, dependencies=protected_dependencies)
 
 
 @app.exception_handler(HTTPException)
@@ -58,9 +67,10 @@ async def request_validation_exception_handler(
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(_: Request, __: Exception) -> JSONResponse:
+async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
     """Return standardized payload for unhandled server exceptions."""
 
+    logger.error("Unhandled exception: %s", exc, exc_info=exc)
     payload = ErrorResponse(
         error="internal_error",
         message="Internal server error.",

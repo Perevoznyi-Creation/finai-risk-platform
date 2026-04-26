@@ -7,7 +7,8 @@ from app.schemas.risk import (
     RiskProfileResponse,
     SymbolPathParam,
 )
-from app.services.pricing import get_ml_risk_profile, get_risk_profile
+from app.services.ml_service import get_ml_risk_profile
+from app.services.risk_service import get_risk_profile
 
 router = APIRouter()
 
@@ -16,6 +17,8 @@ router = APIRouter()
     "/risk-profile/{symbol}",
     response_model=RiskProfileResponse,
     responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
         400: {"model": ErrorResponse},
         404: {"model": ErrorResponse},
         422: {"model": ErrorResponse},

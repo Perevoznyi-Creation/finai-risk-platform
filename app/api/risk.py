@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.schemas.errors import ErrorResponse
 from app.schemas.risk import DaysQueryParam, RiskMetrics, RiskResponse, SymbolPathParam
-from app.services.pricing import get_risk_metrics
+from app.services.risk_service import get_risk_metrics
 
 router = APIRouter()
 
@@ -10,6 +10,8 @@ router = APIRouter()
     "/risk/{symbol}",
     response_model=RiskResponse,
     responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
         404: {"model": ErrorResponse},
         422: {"model": ErrorResponse},
         500: {"model": ErrorResponse},

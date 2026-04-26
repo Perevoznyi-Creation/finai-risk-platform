@@ -29,11 +29,11 @@ def test_price_success_uppercases_symbol(
 ) -> None:
     captured: dict[str, str] = {}
 
-    def fake_get_price(symbol: str) -> float:
+    def fake_fetch_price(symbol: str) -> float:
         captured["symbol"] = symbol
         return 123.45
 
-    monkeypatch.setattr(price_api, "get_price", fake_get_price)
+    monkeypatch.setattr(price_api, "fetch_price", fake_fetch_price)
 
     result = price_api.price("aapl")
 
@@ -47,7 +47,7 @@ def test_price_value_error_maps_to_404(
 ) -> None:
     monkeypatch.setattr(
         price_api,
-        "get_price",
+        "fetch_price",
         lambda _: (_ for _ in ()).throw(ValueError("No data found for symbol AAPL")),
     )
 
@@ -61,7 +61,7 @@ def test_price_value_error_maps_to_404(
 def test_history_success_serializes_rows(monkeypatch: pytest.MonkeyPatch) -> None:
     index = pd.to_datetime(["2026-02-01", "2026-02-02"])
     df = pd.DataFrame({"Close": [201.0, 202.5]}, index=index)
-    monkeypatch.setattr(history_api, "get_price_history", lambda *_: df)
+    monkeypatch.setattr(history_api, "fetch_history", lambda *_: df)
 
     result = history_api.history("msft", days=2)
 

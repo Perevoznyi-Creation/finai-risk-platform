@@ -7,7 +7,7 @@ from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
 from app.core.config import get_settings
-from app.db import models  # noqa: F401
+from app.repositories import models  # noqa: F401
 
 config = context.config
 

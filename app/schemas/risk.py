@@ -7,6 +7,8 @@ from typing import Annotated
 from fastapi import Path, Query
 from pydantic import BaseModel, Field
 
+from app.domain.risk_level import RiskLevel  # noqa: F401
+
 
 SymbolPathParam = Annotated[
     str,
@@ -26,14 +28,6 @@ DaysQueryParam = Annotated[
         description="Number of trailing days used for analysis.",
     ),
 ]
-
-
-class RiskLevel(str, Enum):
-    """Supported categorical risk labels."""
-
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
 
 
 class RiskProfileMode(str, Enum):
