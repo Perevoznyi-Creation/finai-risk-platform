@@ -7,7 +7,8 @@ from app.schemas.risk import (
     RiskProfileResponse,
     SymbolPathParam,
 )
-from app.services.pricing import get_ml_risk_profile, get_risk_profile
+from app.services.ml_service import get_ml_risk_profile
+from app.services.risk_service import get_risk_profile
 
 router = APIRouter()
 

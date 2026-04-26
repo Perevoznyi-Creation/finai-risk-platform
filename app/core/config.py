@@ -13,6 +13,7 @@ class Settings(BaseModel):
 
     app_name: str = Field(default="FinAI Risk Platform")
     app_env: str = Field(default="dev")
+    log_level: str = Field(default="INFO")
     database_url: str = Field(default="sqlite:///./finai.db")
     api_key_salt: str = Field(default="change-me-in-production")
     model_path: str = Field(default="artifacts/risk_model.joblib")
@@ -26,6 +27,7 @@ def get_settings() -> Settings:
     return Settings(
         app_name=os.getenv("APP_NAME", "FinAI Risk Platform"),
         app_env=os.getenv("APP_ENV", "dev"),
+        log_level=os.getenv("LOG_LEVEL", "INFO"),
         database_url=os.getenv("DATABASE_URL", "sqlite:///./finai.db"),
         api_key_salt=os.getenv("API_KEY_SALT", "change-me-in-production"),
         model_path=os.getenv("MODEL_PATH", "artifacts/risk_model.joblib"),

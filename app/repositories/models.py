@@ -1,32 +1,18 @@
 """SQLModel table definitions for persistent platform data."""
 
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Any
 
 from sqlalchemy import JSON, Column, DateTime, Enum as SAEnum, Index, String
 from sqlmodel import Field, SQLModel
+
+from app.domain.risk_level import AnalysisMode, RiskLevel  # noqa: F401
 
 
 def utc_now() -> datetime:
     """Return a timezone-aware UTC timestamp."""
 
     return datetime.now(timezone.utc)
-
-
-class AnalysisMode(str, Enum):
-    """Risk analysis execution mode."""
-
-    rule = "rule"
-    ml = "ml"
-
-
-class RiskLevel(str, Enum):
-    """Canonical risk classification labels."""
-
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
 
 
 class ApiKey(SQLModel, table=True):

@@ -2,14 +2,17 @@
 
 import hashlib
 import hmac
+import logging
 
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
-from app.db.models import ApiKey
-from app.db.session import get_session
+from app.repositories.models import ApiKey
+from app.repositories.session import get_session
+
+logger = logging.getLogger(__name__)
 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -46,6 +49,7 @@ def require_api_key(
     """Authenticate request using X-API-Key header against DB-stored key hashes."""
 
     if not api_key:
+        logger.warning("Auth rejected: missing X-API-Key header")
         raise HTTPException(status_code=401, detail="Missing API key.")
 
     settings = get_settings()
@@ -62,6 +66,8 @@ def require_api_key(
             return key_row
 
     if inactive_match:
+        logger.warning("Auth rejected: inactive API key presented (name=%s)", key_row.name)
         raise HTTPException(status_code=403, detail="API key is inactive.")
 
+    logger.warning("Auth rejected: invalid API key")
     raise HTTPException(status_code=401, detail="Invalid API key.")

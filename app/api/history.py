@@ -13,7 +13,7 @@ from app.schemas.risk import (
     HistoryResponse,
     SymbolPathParam,
 )
-from app.services.pricing import get_price_history
+from app.infrastructure.market.yfinance_client import fetch_history
 
 router = APIRouter()
 
@@ -46,7 +46,7 @@ def history(symbol: SymbolPathParam, days: DaysQueryParam = 30) -> HistoryRespon
     normalized_symbol = symbol.upper()
 
     try:
-        df = get_price_history(normalized_symbol, days)
+        df = fetch_history(normalized_symbol, days)
 
         prices = [
             HistoryPoint(

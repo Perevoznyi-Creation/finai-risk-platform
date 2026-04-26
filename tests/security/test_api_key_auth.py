@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from app.db.models import ApiKey
+from app.repositories.models import ApiKey
 from app.security import api_key as api_key_security
 
 
