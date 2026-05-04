@@ -34,8 +34,15 @@ dev = [
     "pytest (>=9.0.2,<10.0.0)",
     "ruff (>=0.14.14,<0.15.0)",
     "black (>=26.1.0,<27.0.0)",
-    "mypy (>=1.19.1,<2.0.0)"
+    "mypy (>=1.19.1,<2.0.0)",
+    "poethepoet (>=0.33.0)"
 ]
+
+[tool.poe.tasks]
+up = "docker compose up --build -d"
+down = "docker compose down"
+logs = "docker compose logs -f backend"
+train = "docker compose exec backend python -m app.ml.train"
 
 [tool.mypy]
 python_version = "3.12"

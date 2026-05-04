@@ -30,7 +30,7 @@ def risk_profile(
     days: DaysQueryParam = 90,
     mode: RiskProfileMode = Query(default=RiskProfileMode.rule),
 ) -> RiskProfileResponse:
-    """Return the rule-based risk profile for a ticker.
+    """Return the rule-based or machine learning risk profile for a ticker.
 
     Args:
         symbol: Asset ticker symbol.

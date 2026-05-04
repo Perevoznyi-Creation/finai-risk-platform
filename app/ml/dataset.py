@@ -1,7 +1,7 @@
 import pandas as pd
 from app.infrastructure.market.yfinance_client import fetch_history
 from app.domain.metrics import (
-    compute_resurns,
+    compute_returns,
     compute_volatility,
     compute_max_drawdown,
 )
@@ -21,7 +21,7 @@ def build_dataset(symbols: list[str], days: int = 180) -> pd.DataFrame:
 
     for symbol in symbols:
         df = fetch_history(symbol, days)
-        returns = compute_resurns(df)
+        returns = compute_returns(df)
 
         volatility = compute_volatility(returns)
         max_drawdown = compute_max_drawdown(df)

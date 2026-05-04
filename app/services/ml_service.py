@@ -8,7 +8,7 @@ from typing import Any
 import joblib
 
 from app.core.config import get_settings
-from app.domain.metrics import compute_max_drawdown, compute_resurns, compute_volatility
+from app.domain.metrics import compute_max_drawdown, compute_returns, compute_volatility
 from app.infrastructure.market.yfinance_client import fetch_history
 from app.ml.model import RiskModel
 
@@ -52,7 +52,7 @@ def get_ml_risk_profile(symbol: str, days: int) -> dict[str, Any]:
     """
     logger.debug("Running ML risk profile for %s over %d days", symbol, days)
     df = fetch_history(symbol, days)
-    returns = compute_resurns(df)
+    returns = compute_returns(df)
 
     features: dict[str, Any] = {
         "volatility": compute_volatility(returns),
