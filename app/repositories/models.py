@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Column, DateTime, Enum as SAEnum, Index, String
 from sqlmodel import Field, SQLModel
 
@@ -53,6 +54,10 @@ class RiskAnalysis(SQLModel, table=True):
         sa_column=Column(SAEnum(RiskLevel, name="risk_level"), nullable=False)
     )
     model_version: str | None = Field(default=None, sa_column=Column(String(100), nullable=True))
+    embedding: list[float] | None = Field(
+        default=None,
+        sa_column=Column(Vector(384), nullable=True),
+    )
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),

@@ -18,6 +18,8 @@ class Settings(BaseModel):
     api_key_salt: str = Field(default="change-me-in-production")
     model_path: str = Field(default="artifacts/risk_model.joblib")
     model_encoder_path: str = Field(default="artifacts/risk_label_encoder.joblib")
+    groq_api_key: str = Field(default="")
+    groq_model: str = Field(default="llama-3.1-8b-instant")
 
 
 @lru_cache
@@ -35,4 +37,6 @@ def get_settings() -> Settings:
             "MODEL_ENCODER_PATH",
             "artifacts/risk_label_encoder.joblib",
         ),
+        groq_api_key=os.getenv("GROQ_API_KEY", ""),
+        groq_model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
     )

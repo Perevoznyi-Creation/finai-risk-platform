@@ -81,6 +81,36 @@ class RiskResponse(BaseModel):
     metrics: RiskMetrics = Field(description="Computed risk metrics.")
 
 
+class RiskExplainResponse(BaseModel):
+    """Risk explanation endpoint response schema."""
+
+    symbol: str = Field(description="Ticker symbol.")
+    days: int = Field(ge=1, le=3650, description="Requested trailing day window.")
+    metrics: RiskMetrics = Field(description="Computed risk metrics.")
+    risk_level: str = Field(description="Classified risk label.")
+    explanation: str = Field(description="Plain-English LLM-generated risk explanation.")
+
+
+class RiskSearchResult(BaseModel):
+    """Single result item returned by the semantic risk search endpoint."""
+
+    id: int = Field(description="Record ID.")
+    symbol: str = Field(description="Ticker symbol.")
+    days: int = Field(description="Trailing day window used for analysis.")
+    risk_level: str = Field(description="Classified risk label.")
+    volatility: float = Field(description="Standard deviation of returns.")
+    max_drawdown: float = Field(description="Worst peak-to-trough decline ratio.")
+    mean_return: float = Field(description="Average daily return.")
+    created_at: str = Field(description="ISO-8601 timestamp of when the analysis was stored.")
+
+
+class RiskSearchResponse(BaseModel):
+    """Semantic risk search endpoint response schema."""
+
+    query: str = Field(description="The original search query.")
+    results: list[RiskSearchResult] = Field(description="Matched risk analyses, closest first.")
+
+
 class RiskProfileData(BaseModel):
     """Risk profile values returned for a symbol."""
 
