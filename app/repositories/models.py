@@ -64,6 +64,40 @@ class RiskAnalysis(SQLModel, table=True):
     )
 
 
+class Document(SQLModel, table=True):
+    """Uploaded document (PDF or plain text) stored for RAG queries."""
+
+    __tablename__ = "documents"
+
+    id: int | None = Field(default=None, primary_key=True)
+    filename: str = Field(sa_column=Column(String(500), nullable=False))
+    content_text: str = Field(sa_column=Column(String, nullable=False))
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+
+
+class DocumentChunk(SQLModel, table=True):
+    """Fixed-size text chunk from a document, with its embedding vector."""
+
+    __tablename__ = "document_chunks"
+    __table_args__ = (Index("ix_document_chunks_document_id", "document_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    document_id: int = Field(nullable=False, foreign_key="documents.id")
+    chunk_index: int = Field(nullable=False)
+    chunk_text: str = Field(sa_column=Column(String, nullable=False))
+    embedding: list[float] | None = Field(
+        default=None,
+        sa_column=Column(Vector(384), nullable=True),
+    )
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
 class ModelRegistry(SQLModel, table=True):
     """Registered ML model artifacts and metadata."""
 
