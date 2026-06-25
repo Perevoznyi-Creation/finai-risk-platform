@@ -14,11 +14,6 @@ def compute_returns(df: pd.DataFrame) -> pd.Series:
     """
     return df["Close"].pct_change()
 
-
-# Backward-compatible alias preserving the original typo used in imports.
-compute_resurns = compute_returns
-
-
 def compute_volatility(returns: pd.Series) -> float:
     """Compute volatility from a return series.
 

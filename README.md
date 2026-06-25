@@ -1,273 +1,80 @@
 # FinAI Risk Platform
 
-FastAPI backend for market data retrieval and basic risk analytics.
+FastAPI backend for financial risk metrics and ML-based risk classification.
 
-## Overview
+---
 
-FinAI Risk Platform provides REST endpoints for:
+## Architecture
 
-- Latest asset price lookup
-- Historical close-price retrieval
-- Risk metric computation (`volatility`, `max_drawdown`, `mean_return`)
-- Risk profile classification (`LOW`, `MEDIUM`, `HIGH`) via:
-  - Rule-based scoring (`mode=rule`, default)
-  - ML prediction (`mode=ml`) when model artifacts are available
+| Container | Role |
+|---|---|
+| **backend** | FastAPI + uvicorn, port 8000 |
+| **db** | PostgreSQL 16 |
+| **migrate** | Runs `alembic upgrade head` on startup, then exits |
+| **pgadmin** | pgAdmin 4 UI at `http://localhost:5050` |
 
-Market data is fetched from Yahoo Finance via `yfinance`.
-
-## Requirements
-
-- Python `>=3.12,<3.15`
-- Poetry
-
-## Installation
-
-```bash
-poetry install
 ```
-
-## Run API
-
-```bash
-poetry run uvicorn app.main:app --reload
-```
-
-- Base URL: `http://127.0.0.1:8000`
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
-
-Health check:
-
-```bash
-curl http://127.0.0.1:8000/health
-```
-
-## Request Validation Rules
-
-- `symbol` path param:
-  - 1-10 chars
-  - Regex: `^[A-Za-z][A-Za-z0-9.-]{0,9}$`
-- `days` query param:
-  - Integer in range `1..3650`
-- `mode` query param (`/risk-profile` only):
-  - `rule` (default) or `ml`
-
-## API Endpoints
-
-### `GET /price/{symbol}`
-
-Returns latest close price.
-
-```bash
-curl http://127.0.0.1:8000/price/AAPL
-```
-
-Example response:
-
-```json
-{
-  "symbol": "AAPL",
-  "price": 213.55
-}
-```
-
-### `GET /history/{symbol}?days=30`
-
-Returns trailing daily close prices.
-
-```bash
-curl "http://127.0.0.1:8000/history/AAPL?days=30"
-```
-
-Example response:
-
-```json
-{
-  "symbol": "AAPL",
-  "days": 30,
-  "prices": [
-    { "date": "2026-02-02", "close": 209.11 }
-  ]
-}
-```
-
-### `GET /risk/{symbol}?days=90`
-
-Returns computed risk metrics.
-
-```bash
-curl "http://127.0.0.1:8000/risk/AAPL?days=90"
-```
-
-Example response:
-
-```json
-{
-  "symbol": "AAPL",
-  "days": 90,
-  "metrics": {
-    "volatility": 0.0134,
-    "max_drawdown": -0.112,
-    "mean_return": 0.0008
-  }
-}
-```
-
-### `GET /risk-profile/{symbol}?days=90&mode=rule`
-
-Returns categorical risk profile.
-
-```bash
-curl "http://127.0.0.1:8000/risk-profile/AAPL?days=90&mode=rule"
-curl "http://127.0.0.1:8000/risk-profile/AAPL?days=90&mode=ml"
-```
-
-Example response:
-
-```json
-{
-  "symbol": "AAPL",
-  "days": 90,
-  "mode": "rule",
-  "profile": {
-    "volatility": 0.0134,
-    "max_drawdown": -0.112,
-    "risk_level": "MEDIUM"
-  }
-}
-```
-
-## Error Response Format
-
-All API errors use a common envelope:
-
-```json
-{
-  "error": "validation_error",
-  "message": "Request validation failed.",
-  "details": [
-    { "field": "query.days", "message": "Input should be greater than or equal to 1" }
-  ]
-}
-```
-
-Possible `error` values:
-
-- `validation_error` (422)
-- `http_error` (endpoint-raised HTTP errors, e.g., 400/404)
-- `internal_error` (500)
-
-## Environment Variables
-
-- `APP_NAME` (default: `FinAI Risk Platform`)
-- `APP_ENV` (default: `dev`)
-- `DATABASE_URL` (default: `sqlite:///./finai.db`)
-- `MODEL_PATH` (default: `artifacts/risk_model.joblib`)
-- `MODEL_ENCODER_PATH` (default: `artifacts/risk_label_encoder.joblib`)
-
-## Database Migrations (Alembic)
-
-Alembic is configured in [`alembic.ini`](alembic.ini) and uses `DATABASE_URL` from runtime settings.
-
-Check migration status:
-
-```bash
-poetry run alembic current
-poetry run alembic history
-```
-
-Apply migrations:
-
-```bash
-poetry run alembic upgrade head
-```
-
-Rollback migrations:
-
-```bash
-poetry run alembic downgrade -1
-# or rollback all migrations
-poetry run alembic downgrade base
-```
-
-Create a new migration after model changes:
-
-```bash
-poetry run alembic revision --autogenerate -m "describe change"
-poetry run alembic upgrade head
-```
-
-Create an empty migration (manual SQLAlchemy/Alembic ops):
-
-```bash
-poetry run alembic revision -m "manual change"
-```
-
-Current initial migration:
-
-- `alembic/versions/20260304_0001_initial.py`
-
-## ML Notes
-
-- `app/ml/train.py` builds a dataset and trains a model in-process.
-- `/risk-profile?mode=ml` requires model artifacts to exist at `MODEL_PATH` and `MODEL_ENCODER_PATH`.
-- If artifacts are missing, the API returns `400` with:
-  - `"ML model artifacts not found. Train and export a model first."`
-
-## Development
-
-Run tests:
-
-```bash
-poetry run pytest -q
-```
-
-Run migration tests only:
-
-```bash
-poetry run pytest -q tests/alembic/test_initial_migration.py
-```
-
-Lint/type-check:
-
-```bash
-poetry run ruff check app
-poetry run mypy app
-```
-
-Format:
-
-```bash
-poetry run black .
-```
-
-## Project Structure
-
-```text
 app/
-  main.py
-  api/
-    price.py
-    history.py
-    risk.py
-    risk_profile.py
-  core/
-    config.py
-  services/
-    pricing.py
-  schemas/
-    risk.py
-    errors.py
-  metrics/
-    risk.py
-  scoring/
-    risk_scoring.py
-  ml/
-    dataset.py
-    model.py
-    train.py
-alembic/
-  env.py
-  versions/
-    20260304_0001_initial.py
+  api/            Route handlers: price, history, risk, risk_profile
+  core/           Config, logging
+  domain/         Risk level enums, metrics, scoring
+  infrastructure/ yfinance market data client
+  ml/             Dataset builder, model loader, train script
+  repositories/   SQLModel DB models, session, repo classes
+  schemas/        Pydantic request/response schemas
+  security/       API key hashing and FastAPI dependency
+  services/       Business logic (risk_service, ml_service)
+alembic/versions/ DB migrations
+```
+
+All endpoints require `X-API-Key` header. Error envelope: `{ "error": "...", "message": "...", "details": [...] }`.
+
+---
+
+## First Setup
+
+**Requirements:** Docker, Docker Compose, Python `>=3.12`, [Poetry](https://python-poetry.org/)
+
+```bash
+poetry install              # install local dev tools
+cp .env.example .env        # edit API_KEY_SALT at minimum
+poetry run poe up           # build images and start all containers
+poetry run poe train        # train ML model (required for mode=ml)
+```
+
+API is available at `http://localhost:8000` — Swagger UI at `/docs`.
+
+---
+
+## Inspect the Database (pgAdmin)
+
+Open `http://localhost:5050` and log in with `admin@local.dev` / `admin`.
+
+To register the DB connection:
+1. Right-click **Servers** → **Register → Server**
+2. **General** tab — Name: `finai`
+3. **Connection** tab:
+   - Host: `db`
+   - Port: `5432`
+   - Username: `finai`
+   - Password: `finai_secret`
+   - Database: `finai`
+
+---
+
+## Daily Workflow
+
+```bash
+poetry run poe up           # start (rebuilds if image changed)
+poetry run poe down         # stop and remove containers
+poetry run poe logs         # tail backend logs
+
+git pull && poetry run poe up   # pull changes; migrate runs automatically on restart
+
+poetry run pytest -q            # tests
+poetry run ruff check app && poetry run black .  # lint & format
+
+# Database migrations (when models change)
+poetry run alembic revision --autogenerate -m "describe change"
+poetry run alembic upgrade head   # local; or restart containers to apply in Docker
 ```

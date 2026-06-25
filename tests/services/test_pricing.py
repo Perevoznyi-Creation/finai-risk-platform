@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from app.domain.metrics import compute_max_drawdown, compute_resurns, compute_volatility
+from app.domain.metrics import compute_max_drawdown, compute_returns, compute_volatility
 from app.services import risk_service
 
 
@@ -11,7 +11,7 @@ def test_get_risk_metrics_returns_computed_values(monkeypatch: pytest.MonkeyPatc
 
     result = risk_service.get_risk_metrics("AAPL", 4)
 
-    returns = compute_resurns(df)
+    returns = compute_returns(df)
     assert result["volatility"] == pytest.approx(compute_volatility(returns))
     assert result["max_drawdown"] == pytest.approx(compute_max_drawdown(df))
     assert result["mean_return"] == pytest.approx(float(returns.mean()))

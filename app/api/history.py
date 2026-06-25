@@ -25,8 +25,7 @@ router = APIRouter()
         401: {"model": ErrorResponse},
         403: {"model": ErrorResponse},
         404: {"model": ErrorResponse},
-        422: {"model": ErrorResponse},
-        500: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},        500: {"model": ErrorResponse},
     },
 )
 def history(symbol: SymbolPathParam, days: DaysQueryParam = 30) -> HistoryResponse:

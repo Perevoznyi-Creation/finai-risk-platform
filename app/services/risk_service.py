@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from app.domain.metrics import compute_max_drawdown, compute_resurns, compute_volatility
+from app.domain.metrics import compute_max_drawdown, compute_returns, compute_volatility
 from app.domain.scoring import classify_risk
 from app.infrastructure.market.yfinance_client import fetch_history
 
@@ -21,7 +21,7 @@ def get_risk_metrics(symbol: str, days: int) -> dict[str, Any]:
         ValueError: Price history could not be loaded.
     """
     df = fetch_history(symbol, days)
-    returns = compute_resurns(df)
+    returns = compute_returns(df)
 
     return {
         "volatility": compute_volatility(returns),
@@ -44,7 +44,7 @@ def get_risk_profile(symbol: str, days: int) -> dict[str, Any]:
         ValueError: Price history could not be loaded.
     """
     df = fetch_history(symbol, days)
-    returns = compute_resurns(df)
+    returns = compute_returns(df)
     volatility = compute_volatility(returns)
     max_drawdown = compute_max_drawdown(df)
 
