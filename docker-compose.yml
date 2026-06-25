@@ -1,10 +1,15 @@
+# Development & Local Staging
+# For production, deploy to ECS Fargate or EC2 with RDS
+# See DEPLOYMENT.md for AWS setup instructions
+
 services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    container_name: finai_postgres
     environment:
       POSTGRES_USER: finai
-      POSTGRES_PASSWORD: finai_secret
+      POSTGRES_PASSWORD: finai_secret  # Change in production; use AWS Secrets Manager
       POSTGRES_DB: finai
     ports:
       - "5432:5432"
@@ -15,44 +20,69 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
-  migrate:
-    build: .
-    command: alembic upgrade head
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://finai:finai_secret@db:5432/finai
-    depends_on:
-      db:
-        condition: service_healthy
-
+  # Shared image definition — built once, reused by migrate & backend
   backend:
+    image: finai-risk-platform-backend:latest
     build: .
+    container_name: finai_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     env_file: .env
     environment:
       DATABASE_URL: postgresql://finai:finai_secret@db:5432/finai
+      APP_ENV: local  # Change to 'prod' in production
     volumes:
       - ./artifacts:/app/artifacts
     depends_on:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "X-API-Key: dev-key", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    restart: unless-stopped
+  migrate:
+    image: finai-risk-platform-backend:latest
+    command: alembic upgrade head
+    container_name: finai_migrate
+    env_file: .env
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@local.dev
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      DATABASE_URL: postgresql://finai:finai_secret@db:5432/finai
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
 volumes:
   postgres_data:
-  pgadmin_data:
+    driver: local

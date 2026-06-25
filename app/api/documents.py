@@ -4,11 +4,30 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from app.repositories.document_repo import DocumentRepository
 from app.repositories.session import get_session
 from app.schemas.errors import ErrorResponse
 from app.services.document_service import ingest_document
+from app.services.rag import answer_question
 
 router = APIRouter()
+
+
+class DocumentChatRequest(BaseModel):
+    """Request payload for a document chat query."""
+
+    question: str = Field(
+        ..., description="Question about the uploaded document.", min_length=3, max_length=500
+    )
+
+
+class DocumentChatResponse(BaseModel):
+    """Chat response returned from a document retrieval query."""
+
+    document_id: int = Field(description="ID of the document that was queried.")
+    question: str = Field(description="Original question submitted by the user.")
+    answer: str = Field(description="LLM-generated answer grounded in the document.")
+    sources: list[str] = Field(description="Document chunk texts used as sources for the answer.")
 
 _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
@@ -85,4 +104,46 @@ async def upload_document(
         filename=filename,
         chunk_count=chunk_count,
         message=f"Document ingested successfully into {chunk_count} chunks.",
+    )
+
+
+@router.post(
+    "/documents/{document_id}/chat",
+    response_model=DocumentChatResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
+)
+def chat_document(
+    document_id: int,
+    request: DocumentChatRequest,
+    session: Session = Depends(get_session),
+) -> DocumentChatResponse:
+    """Answer a natural-language question about an uploaded document."""
+    repo = DocumentRepository(session)
+    document = repo.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    try:
+        answer, sources = answer_question(request.question, document_id, repo)
+    except ValueError as exc:
+        detail = str(exc)
+        if "No embedded chunks found" in detail:
+            raise HTTPException(status_code=404, detail=detail) from exc
+        raise HTTPException(status_code=500, detail=detail) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Document chat failed: {exc}") from exc
+
+    return DocumentChatResponse(
+        document_id=document_id,
+        question=request.question,
+        answer=answer,
+        sources=sources,
     )

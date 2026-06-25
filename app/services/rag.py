@@ -1,11 +1,16 @@
 """RAG service — Retrieval Augmented Generation over uploaded documents."""
 
 from openai import OpenAI
+import time
+import structlog
 
 from app.core.config import get_settings
 from app.repositories.document_repo import DocumentRepository
 from app.repositories.models import DocumentChunk
 from app.services.embeddings import embed_text
+from app.services.metrics_logger import log_llm_metric
+
+logger = structlog.get_logger()
 
 _TOP_K = 5           # number of chunks to retrieve
 _MAX_CONTEXT_CHARS = 3000  # cap total context injected into the prompt
@@ -95,6 +100,7 @@ def answer_question(
         base_url="https://api.groq.com/openai/v1",
     )
 
+    start = time.time()
     response = client.chat.completions.create(
         model=settings.groq_model,
         messages=[
@@ -104,6 +110,34 @@ def answer_question(
         max_tokens=500,
         temperature=0.2,
     )
+    duration = time.time() - start
 
     answer = response.choices[0].message.content.strip()
+
+    usage = None
+    try:
+        usage = getattr(response, "usage", None) or response.get("usage")
+    except Exception:
+        usage = None
+
+    logger.info(
+        "rag.answer",
+        document_id=document_id,
+        question_len=len(question),
+        chunks_retrieved=len(chunks),
+        model=settings.groq_model,
+        duration_seconds=round(duration, 3),
+        answer_length=len(answer),
+        usage=usage,
+    )
+
+    log_llm_metric(
+        operation="rag",
+        model=settings.groq_model,
+        duration_ms=duration * 1000,
+        input_tokens=usage.get("prompt_tokens") if usage else None,
+        output_tokens=usage.get("completion_tokens") if usage else None,
+        total_tokens=usage.get("total_tokens") if usage else None,
+    )
+
     return answer, sources

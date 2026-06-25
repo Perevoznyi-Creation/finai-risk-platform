@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Column, DateTime, Enum as SAEnum, Index, String
+from sqlalchemy import JSON, Column, DateTime, Enum as SAEnum, Index, Integer, String
 from sqlmodel import Field, SQLModel
 
 from app.domain.risk_level import AnalysisMode, RiskLevel  # noqa: F401
@@ -57,6 +57,11 @@ class RiskAnalysis(SQLModel, table=True):
     embedding: list[float] | None = Field(
         default=None,
         sa_column=Column(Vector(384), nullable=True),
+    )
+    eval_score: int | None = Field(
+        default=None,
+        sa_column=Column(Integer, nullable=True),
+        description="LLM-as-judge rating (1-5) of explanation quality. Higher is better.",
     )
     created_at: datetime = Field(
         default_factory=utc_now,
@@ -118,4 +123,26 @@ class ModelRegistry(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class LLMCallMetric(SQLModel, table=True):
+    """Tracks LLM API call performance and token usage."""
+
+    __tablename__ = "llm_call_metrics"
+    __table_args__ = (Index("ix_llm_call_metrics_created_at", "created_at"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    operation: str = Field(
+        sa_column=Column(String(50), nullable=False), description="e.g., 'explain', 'rag', 'eval'"
+    )
+    model: str = Field(sa_column=Column(String(100), nullable=False))
+    duration_ms: float = Field(nullable=False, description="Latency in milliseconds.")
+    input_tokens: int | None = Field(default=None)
+    output_tokens: int | None = Field(default=None)
+    total_tokens: int | None = Field(default=None)
+    eval_score: int | None = Field(default=None, description="If eval operation, the score (1-5).")
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
     )

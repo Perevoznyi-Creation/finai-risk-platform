@@ -1,8 +1,13 @@
 """LLM service — generates plain-English risk explanations via Groq."""
 
 from openai import OpenAI
+import time
+import structlog
 
 from app.core.config import get_settings
+from app.services.metrics_logger import log_llm_metric
+
+logger = structlog.get_logger()
 
 _SYSTEM_PROMPT = """\
 You are a financial risk analyst assistant.
@@ -59,6 +64,7 @@ def explain_risk(
         base_url="https://api.groq.com/openai/v1",
     )
 
+    start = time.time()
     response = client.chat.completions.create(
         model=settings.groq_model,
         messages=[
@@ -68,5 +74,33 @@ def explain_risk(
         max_tokens=300,
         temperature=0.4,
     )
+    duration = time.time() - start
 
-    return response.choices[0].message.content.strip()
+    usage = None
+    try:
+        usage = getattr(response, "usage", None) or response.get("usage")
+    except Exception:
+        usage = None
+
+    answer = response.choices[0].message.content.strip()
+
+    logger.info(
+        "llm.explain",
+        symbol=symbol,
+        days=days,
+        model=settings.groq_model,
+        duration_seconds=round(duration, 3),
+        answer_length=len(answer),
+        usage=usage,
+    )
+
+    log_llm_metric(
+        operation="explain",
+        model=settings.groq_model,
+        duration_ms=duration * 1000,
+        input_tokens=usage.get("prompt_tokens") if usage else None,
+        output_tokens=usage.get("completion_tokens") if usage else None,
+        total_tokens=usage.get("total_tokens") if usage else None,
+    )
+
+    return answer

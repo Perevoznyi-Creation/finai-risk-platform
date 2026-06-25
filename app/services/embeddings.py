@@ -1,10 +1,14 @@
 """Embeddings service — generates vector embeddings locally via sentence-transformers."""
 
 from functools import lru_cache
+import time
+import structlog
 
 from sentence_transformers import SentenceTransformer
 
 _MODEL_NAME = "all-MiniLM-L6-v2"
+
+logger = structlog.get_logger()
 
 
 @lru_cache(maxsize=1)
@@ -25,4 +29,8 @@ def embed_text(text: str) -> list[float]:
         List of 384 floats representing the semantic embedding.
     """
     model = _get_model()
-    return model.encode(text, normalize_embeddings=True).tolist()
+    start = time.time()
+    vec = model.encode(text, normalize_embeddings=True).tolist()
+    duration = time.time() - start
+    logger.debug("embedding.generate", text_len=len(text), duration_seconds=round(duration, 3))
+    return vec
